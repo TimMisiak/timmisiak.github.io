@@ -2,6 +2,7 @@ baseURL = '/'
 languageCode = 'en-us'
 title = 'TimDbg'
 theme = "m10c"
+googleAnalytics = "G-ZF3NN3CLRX"
 
 [params]
   author = "Tim Misiak"
