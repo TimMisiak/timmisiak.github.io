@@ -5,7 +5,7 @@ theme = "m10c"
 
 [params]
   author = "Tim Misiak"
-  description = "The art and science of debugging, and Windows debugging tips from a WinDbg dev"
+  description = "The art and science of debugging. Windows debugging tips from a WinDbg dev"
   favicon = "WinDbg.ico"
   avatar = "avatar.jpg"
 
