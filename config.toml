@@ -29,3 +29,8 @@ googleAnalytics = "G-ZF3NN3CLRX"
   icon = "twitter"
   name = "Twitter"
   url = "https://twitter.com/timmisiak"
+
+[[params.social]]
+  icon = "youtube"
+  name = "YouTube"
+  url = "https://www.youtube.com/channel/UCyQ7p63-9V9PZJvgHLKgsaw"
