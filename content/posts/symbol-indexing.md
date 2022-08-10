@@ -121,4 +121,4 @@ A few other notes about this that didn't fit anywhere else:
 * The "index2.txt" file can be put at the root of a symbol store to change the file structure slightly. This is called a "Two-Tier Structure", and you can read more about this on [MSDN](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/symbol-store-folder-tree)
 * Files on a symbol store can also be compressed as CAB or ZIP files. If compressed, the files should be named with the last character as an underscore. For instance, ```combase.dll\AFBF9EF6354000\combase.dl_```. 
 * The "timestamp" field of a binary may not be a timestamp if the debug directory contains a ```repro``` type entry. The debugger generally doesn't care about that when downloading binaries though, since it still works the same way.
-* The debugger doesn't always "map" images in for kernel debugging today when it is needed. That's been on my backlog for a while and is something I will be fixing in the next few months.
+* The debugger doesn't always "map" images in when debugging kernel dumps where it would be useful. That's been on my backlog for a while and is something I will be fixing in the next few months.
