@@ -1,7 +1,7 @@
 ---
 title: "Symbol and Binary Indexing"
-date: 2022-08-06T08:30:09-07:00
-draft: true
+date: 2022-08-10T08:30:09-07:00
+draft: false
 ---
 
 Symbol indexing is one of those features of WinDbg that can make things "just work" in a way that seems like magic. But it can also be the most painful things when it goes wrong.
@@ -10,7 +10,7 @@ Symbol indexing is one of those features of WinDbg that can make things "just wo
 
 Most of us have tried to debug without symbols at one point, and it can quickly become an exercise in frustration. It's much more productive to debug an executable where you have symbols because it gives you function names, variable names, type definitions, and source files. Since most Windows applications don't ship with private symbols (with some notable [exceptions](https://twitter.com/timmisiak/status/1533483161954308096)), we need some way to get the symbols for a binary. That's where symbol indexing and symbol servers come into play. Every binary built with symbols comes with a section of data called the "debug directory" which contains information about its symbols. Windows debuggers (including Visual Studio and WinDbg) can use the debug directory to download symbols from a shared symbol server. Usually symbols are published to this server as part of the build process for a product. Microsoft hosts a public symbol server for most of its products at ```https://msdl.microsoft.com/download/symbols```.
 
-While it might seem obvious that symbols are required to be productive in the debugger, it is less obvious that binaries are also needed and should be indexed on the symbol server! It's easy to miss that the binaries are needed, since private builds and live usermode debugging sessions always have the binaries available to the debugger. On the other hand, usermode minidumps do not always contain the full memory for loaded modules to save space, and kernel dumps may not contain the full memory of loaded modules if parts of them are paged out when the dump is captured. When the full binary is not available, the debugger can use the information in the header to download the binary from the symbol server and "map" it in so that the data is available just as if it were captured in the dump. The contents of the binaries are critical for a number of things, but the most important part is for stack walking. The binaries contain information for the OS to perform stack unwinds and for debuggers to walk the stack. If you index your symbols but not your binaries, things may seem to work at first if you debug a live process or a dump that was captured from the same machine as the debugger, but as soon as you start debugging a crash dump that came from somewhere else, however, you'll start to see problems in the stack unwind and elsewhere.
+While it might seem obvious that symbols are required to be productive in the debugger, it is less obvious that binaries are also needed and should be indexed on the symbol server. It's easy to miss that the binaries are needed, since private builds and live usermode debugging sessions usually have the binaries available local in places that the debugger can easily find or read from memory. On the other hand, usermode minidumps do not always contain the full memory for loaded modules to save space in the dump file, and kernel dumps may not contain the full memory of loaded modules if parts of them are paged out when the dump is captured. When the full binary is not available, the debugger can use the information in the header to download the binary from the symbol server and "map" it in so that the data is available just as if it were captured in the dump. The contents of the binaries are critical for a number of things, but the most important part is for stack walking. The binaries contain information for the OS to perform stack unwinds and for debuggers to walk the stack. If you index your symbols but not your binaries, things may seem to work at first if you debug a live process or a dump that was captured from the same machine as the debugger, but as soon as you start debugging a crash dump that came from somewhere else, however, you'll start to see problems in the stack unwind and elsewhere.
 
 # How can I index symbols and binaries?
 
@@ -54,7 +54,7 @@ For binaries, the index is the timestamp and size concatenated together. As ment
 https://msdl.microsoft.com/download/symbols/combase.dll/AFBF9EF6354000/combase.dll
 ```
 
-You can test this by pasting it into a browser or using PowerShell:
+You can test this by pasting the URL into a browser or using PowerShell to download the file:
 
 ```
 Invoke-WebRequest -Uri "https://msdl.microsoft.com/download/symbols/combase.dll/AFBF9EF6354000/combase.dll" -OutFile combase.dll
@@ -87,7 +87,7 @@ SYMSRV:  HTTPGET: /download/symbols/combase.dll/AFBF9EF6354000/combase.dll
 SYMSRV:  HttpQueryInfo: 801900c8 - HTTP_STATUS_OK
 ```
 
-Now that we have the image file, we need to find the symbol file. To do this we need to look at the debug directories for the binary. One way is with ```link.exe``` from the compiler tools:
+Now that we have the image file, we can use it to find the symbol file. To do this we need to look at the debug directories for the binary. One way is with ```link.exe``` from the compiler tools:
 
 
 ```
@@ -121,3 +121,4 @@ A few other notes about this that didn't fit anywhere else:
 * The "index2.txt" file can be put at the root of a symbol store to change the file structure slightly. This is called a "Two-Tier Structure", and you can read more about this on [MSDN](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/symbol-store-folder-tree)
 * Files on a symbol store can also be compressed as CAB or ZIP files. If compressed, the files should be named with the last character as an underscore. For instance, ```combase.dll\AFBF9EF6354000\combase.dl_```. 
 * The "timestamp" field of a binary may not be a timestamp if the debug directory contains a ```repro``` type entry. The debugger generally doesn't care about that when downloading binaries though, since it still works the same way.
+* The debugger doesn't always "map" images in for kernel debugging today when it is needed. That's been on my backlog for a while and is something I will be fixing in the next few months.
