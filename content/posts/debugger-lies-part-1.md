@@ -4,7 +4,7 @@ date: 2022-08-21T09:57:31-07:00
 draft: false
 ---
 
-There are lots of reasons your debugger might be lying to you. Sometimes it's because information is lost when compiling due to optimizations. Sometimes the symbolic debug information isn't expressive enough. Other times it can be due to a bug in the debugger (although I hope that reason is rare). One frustrating case where the debugger sometimes "lies" to you is the stack walk. It's the single most important information to come out of a crash, so when the stack walk is wrong, it's probably going to make analysis difficult. There are lots of why a stack walk can go bad, but one frequent cause is corrupted stack memory.
+There are lots of reasons your debugger might be lying to you. Sometimes it's because information is lost when compiling due to optimizations. Sometimes the symbolic debug information isn't expressive enough. Other times it can be due to a bug in the debugger (although I hope that reason is rare). One frustrating case where the debugger sometimes "lies" to you is the stack walk. It's the single most important piece of information to come out of a crash, so when the stack walk is wrong, it's probably going to make analysis difficult. There are lots of why a stack walk can go bad, but one frequent cause is corrupted stack memory.
 
 # Stack corruption
 
@@ -230,3 +230,5 @@ A more complete version of this script is on the [WinDbgCookbook repo](https://g
 # Conclusion
 
 I don't intend for this post to be exhaustive, but I think I've covered a wide range of approaches for debugging stack corruption. I'm sure there are many more approaches, so let me know if there is a technique that you use that I didn't mention.
+
+Let me know if you have questions or comments on [this Twitter thread](https://twitter.com/timmisiak/status/1561743168139235328)
