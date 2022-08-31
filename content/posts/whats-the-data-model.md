@@ -16,17 +16,17 @@ If you use WinDbg a lot, then there's a pretty good chance that you've used some
 
 **The second problem** is that the old style of debugger extensions **don't compose because extensions have unstructured output**. In other words, you can't easily use the information in one extension and chain that with another extension. People have written text processing and chaining extensions, but none of these are going to work smoothly with every extension. And since the output is unstructured, it's not something you'll be able to easily use if you want to script the debugger or create a conditional breakpoint. 
 
-**The third problem** is that debugger extensions are **incredibly difficult to write**. Extensions are generally written using the [DbgEng COM-style API](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/dbgeng/nn-dbgeng-idebugclient) or a wrapper on top of these APIs such as [EngExtCpp](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/engextcpp-extension-libraries). Some tasks are painful, and others are downright impossible.
+**The third problem** is that debugger extensions are **incredibly difficult to write**. Extensions are generally written using the [DbgEng COM-style API](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/dbgeng/nn-dbgeng-idebugclient) or a wrapper on top of these APIs such as [EngExtCpp](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/engextcpp-extension-libraries). While the APIs available are very powerful, they can also be very clunky and verbose to use, even for some of the simplest things you'd want to do in an extension. And the nature of writing a native DLL that uses these APIs often requires lots of boilerplate code.
 
 Even with all of these problems, extensions have become a huge part of WinDbg's success. So how do we address these problems?
 
 # The Debugger Data Model
 
-Our answer to this was the Debugger Data Model. We wanted to make extensions **easy to discover**, **easy to compose**, and **easy to write**. To do that required a shift in how we think about debugger extensions. The biggest part of that shift is moving from a text model to a structured data model. From this, we have a path to solve the three biggest problems with text only extensions.
+Our answer to this was the Debugger Data Model. We wanted to make extensions **easy to discover**, **easy to compose**, and **easy to write**. To do that required a shift in how we think about debugger extensions. The biggest part of that shift is moving from a text model to a structured data model. Creating a system of extensions that work with structured data gives us a path to solve these problems.
 
 # Discoverability
 
-The best way to make debugger extensions discoverable is to simply make them available when they are needed without having to even know about them in the first place. Previously, to debug any of the STL data structures you would either need to manually interpret the contents of structures (which could be painful for things like hash tables) or you would need to know about extensions such as ```!stl```. With the debugger data model, the extension for interpreting the STL structures gets used *automatically* whenever you look at an STL structure. 
+The best way to make debugger extensions discoverable is to simply make them available when they are needed without having to even know about them in the first place. Previously, to debug any of the C++ Standard Template Library data structures like ```std::vector``` you would either need to manually interpret the contents of structures (which could be painful for things like hash tables) or you would need to know about extensions such as ```!stl```. With the debugger data model, the extension for interpreting the STL structures gets used *automatically* whenever you look at an STL structure. 
 
 Take this code for example:
 
@@ -55,7 +55,7 @@ testVec                 : { size=3 }
     [2]              : "And our final string!"
 ```
 
-Compare that to what you would see without the debugger data model. We can use the ```??``` command, which by default does not use the debugger data model for evaluation and visualization.
+Compare that to what you would see without the debugger data model. The ```??``` command does not use the debugger data model for evaluation and visualization by default, so you can use that to see what evaluation would look like without the data model.
 
 ```
 0:000> ?? testVec
@@ -67,9 +67,9 @@ The difference is that the debugger extension for visualizing STL types is used 
 
 # Structured data and composability
 
-Making extensions in the debugger data model compose together naturally means that the extensions deal with structured data, not text. More than that, it gives us the ability to have debugger extensions that can be used in [conditional breakpoints](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/setting-a-conditional-breakpoint). It gives us the ability to write [scripts that query data from extensions](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/javascript-debugger-scripting). And it also gives us the ability to [filter, query, and visualize data in a standard way](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/dx--display-visualizer-variables-).
+Making extensions in the debugger data model compose together naturally means that the extensions deal with structured data, not text. It opens up new ways of using extensions. For instance, it enables debugger extensions that can be used in [conditional breakpoints](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/setting-a-conditional-breakpoint). It also gives us the ability to write [scripts that query data from extensions](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/javascript-debugger-scripting). And it gives us the ability to [filter, query, and visualize data in a standard way](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/dx--display-visualizer-variables-).
 
-Consider code that does something like this.
+Here's a small test program that we can debug using ```std::vector```.
 
 {{< highlight cpp >}}
 std::vector<int> testVec;
@@ -163,7 +163,7 @@ function findSumOfTrueItems(vec)
 }
 {{< / highlight >}}
 
-And you can load this script and execute it in the debugger:
+You can use this JavaScript function easily in the data model.
 
 ```
 0:000> dx @$scriptContents.findSumOfTrueItems(testVec)
@@ -178,5 +178,5 @@ Going into more depth than this would make this post way too long, but if you wa
 
 Even without going into much depth, this post has gotten long. There's a lot more I could say here, and I'm sure I'll write more about specific aspects of the data model. We still have lots of plans for how to make the debugger data model easier to use and more powerful, and I don't think we've even scratched the surface of what it can become.
 
-What else do you want to know about the data model? Have any scripts or queries that you think are cool? Let me know what you think on [Twitter](https://twitter.com/timmisiak)!
+What else do you want to know about the data model? Have any scripts or queries that you think are cool? Let me know what you think on [Twitter](https://twitter.com/timmisiak/status/1564991866432811008)!
 
