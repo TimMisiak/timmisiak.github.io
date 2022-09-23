@@ -16,11 +16,11 @@ time, but I tend to use it not as a debugger, but as a disassembler on
 steroids that you can program.
 ```
 
-Linus clearly is clearly a very intelligent and talented engineer, and his perspective is worth understanding. His main point seems to be around putting up a barrier to entry to force people to think more carefully about the code they are writing. I can understand why he thinks it's valuable to have barriers to entry on contributing to the Linux kernel, but that logic doesn't fly anywhere that we want to make it easier for people to contribute features and fix bugs. He is right, however, in that debuggers are not always the right tool for the job. And that's what this post is about. Finding the right tool for the job, because the more tools you can effectively use, the more effective you will be at troubleshooting problems.
+Linus clearly is clearly a very intelligent and talented engineer, and his perspective is worth understanding. If you read his full <s>rant</s> email, his main point seems to be around putting up a barrier to entry to force people to think more carefully about the code they are writing. I can understand why he thinks it's valuable to have barriers to entry on contributing to the Linux kernel, but I don't feel that logic works as well for cases where we want to make it **easier** for people to contribute features and fix bugs. But I think that the larger point is that debuggers are not always the right tool for the job. And that's what this post is about. Finding the right tool for the job is important, because using the right tools will make you more effective at troubleshooting problems.
 
-# Finding the right tradeoffs
+# Tradeoffs
 
-For most problems that you will diagnose, there will be multiple paths to get to the right answer because there are overlaps between the data sets that each tool gives you access to. The tradeoffs I think about are between lightweight vs. heavyweight, time vs. space, and predefined vs. ad hoc.
+For most problems that you will diagnose, there will be multiple paths to get to the right answer. There are overlaps between the types of information that each tool gives you access to, but the method for collecting the data will affect how efficiently you can analyze the problem. Both printf debugging and profilers can give you access to similar sets of information, but the types of problems that are appropriate to debug with each are very different because they make different tradeoffs about the data that is collected. The tradeoffs I think about for diagnostic tools are between lightweight vs. heavyweight, time vs. space, and predefined vs. ad hoc.
 
 ## Lightweight vs. Heavyweight
 
@@ -42,5 +42,5 @@ Both approaches are important. Without good logging, nearly every issue will req
 
 # So... when should you use printf debugging?
 
-In the context of these tradeoffs, when should you be using printf debugging? You should be using printf debugging when you need a light weight, ad hoc method of examining a narrow set of data or code flow over a longer period of time. If you are using printf debugging in any other context, there's a good chance that there's a better tool for the job.
+In the context of these tradeoffs, when should you be using printf debugging? You should be using printf debugging when you need a light weight, ad hoc method of examining a narrow set of data or code flow over a longer period of time. If you are using printf debugging in any other context, there's a good chance that there's a better tool for the job. Grow the set of tools that you're using so that you can use the right tool for the job.
 
