@@ -4,7 +4,7 @@ date: 2022-09-24T12:20:24-07:00
 draft: false
 ---
 
-If you know who I am, you might think that this post title is clickbait. Maybe it is, a little. But the truth is, you should do printf debugging! Sometimes. Often not. But sometimes, you should!
+If you know who I am, you might think that this post title is clickbait. Maybe it is, a little. But the truth is, you *should* do printf debugging! Sometimes. Often not. But sometimes, you should!
 
 Let me explain. When most of us first started programming, we had one tool at our disposal. It was "printf debugging". Sometimes just littering the code with ```printf("here")```, ```printf("here2")```, and my favorite, ```printf("why won't this code work?!?!?!")```. Then we spent hours staring at the console output trying to figure out why some code did or didn't execute, or try to figure out what's going on in our code based on the values that were being printed out.
 
