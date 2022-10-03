@@ -24,7 +24,7 @@ The [TextDump example on GitHub](https://github.com/microsoft/WinDbg-Samples/tre
 
 (Hint: To see all of the existing components available, search for DEBUG_COMPONENT in DbgServices.h)
 
-For an extension like this, the debugger needs to know when it should be used. This is done through an XML manifest file that describes the conditions for which an extension should be loaded. The TextDump sample uses a [manifest file](https://github.com/microsoft/WinDbg-Samples/blob/master/TargetComposition/TextDump/TextDump_GalleryManifest.xml) that describes the type of target that is supported, which in this case is a "text dump file" registered for the ".txt" extension.:
+For an extension like this, the debugger needs to know when it should be used. This is done through an XML manifest file that describes the conditions for which an extension should be loaded. The TextDump sample uses a [manifest file](https://github.com/microsoft/WinDbg-Samples/blob/master/TargetComposition/TextDump/TextDump_GalleryManifest.xml) that describes the type of target that is supported, which in this case is a "text dump file" registered for the ".txt" extension:
 
 {{< highlight xml >}}
 <?xml version="1.0" encoding="utf-8"?>
