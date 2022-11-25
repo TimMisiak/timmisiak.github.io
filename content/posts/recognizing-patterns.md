@@ -27,7 +27,7 @@ When viewing the data as 8 bytes or 16 bytes per line, columns show up with simi
 
 ## Pointers
 
-A special case of aligned data is pointers. These are often very easy to spot. While a 64-bit pointer could span the entire address range, in reality you see a number of patterns in the addresses that we see in a Windows process.
+A special case of aligned data is pointers. These are often very easy to spot. While a 64-bit pointer could span the entire address range, in reality they exist in a limited part of the address space in windows usermode processes. The virtual address space is [the 128-terabyte range 0x0000'00000000 through 0x7FFF'FFFFFFFF](https://learn.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/virtual-address-spaces). As a result, one easy way to see if 64-bit value might be a pointer is checking if the high 16 bits are all zero. (e.g. in the form of ```0x0000XXXX'XXXXXXXX```). To make things easier, the allocated virtual memory tends to be "clumped together" in a few clusters for most processes.
 
 Take this stack dump for instance:
 
