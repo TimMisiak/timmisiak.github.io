@@ -6,7 +6,7 @@ draft: false
 
 Something I find frustrating is how hard it is to teach debugging skills. I think the biggest reason is because there are many things that can only be learned through experience. This is true for anything that requires pattern recognition. Our brains are great at recognizing patterns, but it often takes a large amount of practice to be able to identify useful patterns in data.
 
-I can't instantly give you pattern recognition skills with a short blog post, but I can tell you about some of the patterns that I look for so you can start to train your brain to see these as well. Recognizing patterns in memory can be useful as it can give you a hint for things like memory corruption, which are often some of the hardest errors to debug from a postmortem analysis. Getting a rough idea of what type data is ovewriting other data in a process can tell you where to look next and can help narrow down where an issue might be, because the bug is usually in the code that wrote this data (or in closely related code).
+I can't instantly give you pattern recognition skills with a short blog post, but I can tell you about some of the patterns that I look for so you can start to train your brain to see these as well. Recognizing patterns in memory can be useful as it can give you a hint for things like memory corruption, which are often some of the hardest errors to debug from a postmortem analysis. Getting a rough idea of what type data is ovewriting other data in a process can tell you where to look next for the source of memory corruption. It can help narrow down where an issue might be because the bug is usually near the code that wrote this data.
 
 # Aligned 32/64-bit data
 
