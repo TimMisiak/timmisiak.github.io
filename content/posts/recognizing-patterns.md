@@ -4,13 +4,13 @@ date: 2022-11-24T08:30:09-07:00
 draft: false
 ---
 
-Something I find frustrating is how hard it is to teach debugging skills. I think the biggest reason is because there are many things that can only be learned through experience. One area where I think this is particularly true is anything that requires pattern recognition. Our brains are great at recognizing patterns, but it often takes a large amount of practice to be able to identify useful patterns in data.
+Something I find frustrating is how hard it is to teach debugging skills. I think the biggest reason is because there are many things that can only be learned through experience. This is true for anything that requires pattern recognition. Our brains are great at recognizing patterns, but it often takes a large amount of practice to be able to identify useful patterns in data.
 
 I can't instantly give you pattern recognition skills with a short blog post, but I can tell you about some of the patterns that I look for so you can start to train your brain to see these as well. Recognizing patterns in memory can be useful as it can give you a hint for things like memory corruption, which are often some of the hardest errors to debug from a postmortem analysis. Getting a rough idea of what type data is ovewriting other data in a process can tell you where to look next and can help narrow down where an issue might be, because the bug is usually in the code that wrote this data (or in closely related code).
 
 # Aligned 32/64-bit data
 
-A frequent pattern in both file formats and data structures is aligned 32-bit or 64-bit data. Often we choose to use 32-bits for values that will never come close to filling the full space, simply because they are often efficient to use and are the default choice in cases where memory or storage isn't particularly constrained. Additionally, even when smaller data types are used, it's common for these values to be aligned to 32-bit or 64-bit boundaries. In both cases, we see distinct patterns.
+A frequent pattern in both file formats and in-memory data structures is aligned 32-bit or 64-bit data. We often choose to use 32-bits for values that will never come close to filling the full space. Additionally, even when smaller data types are used, it's common for these values to be aligned to 32-bit or 64-bit boundaries. In both cases, we see distinct patterns when most of the data is much smaller than the reserved space.
 
 Take this memory dump for example:
 
@@ -23,7 +23,7 @@ F8 3A 00 00 32 D0 00 00 15 00 00 00 EC 01 00 00
 A4 2A 00 00 16 00 00 00 98 00 00 00 90 2C 00 00
 ```
 
-When viewing the data as 8 bytes or 16 bytes per line, columns show up of all zero or all nonzero data. Column 0 has all nonzero data, column 3 has all zero data, and column 2 is mostly nonzero data. Looking at column 4, you can see again that it is all nonzero data. We can say with high confidence that there are a bunch of 32-bit values here.
+When viewing the data as 8 bytes or 16 bytes per line, columns show up with similar types of data. Column 0 is the least significant byte of a 4-byte field, and is all non-zero. Column 3 is most significant byte, and is all zeros because none of the values are larger than 24 bits. You can see a similar pattern across the other columns repeating every 4 bytes, so we can say with high confidence that there are a bunch of 32-bit values here.
 
 ## Pointers
 
