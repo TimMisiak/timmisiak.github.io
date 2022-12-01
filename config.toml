@@ -4,6 +4,13 @@ title = 'TimDbg'
 theme = "m10c"
 googleAnalytics = "G-ZF3NN3CLRX"
 
+rssLimit = 20
+copyright = "2022 Tim Misiak"
+languageCode = "en-us"
+
+[author]
+  name = "Tim Misiak"
+
 [params]
   author = "Tim Misiak"
   description = "The art and science of debugging. Windows debugging tips from a WinDbg dev"
