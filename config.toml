@@ -6,7 +6,6 @@ googleAnalytics = "G-ZF3NN3CLRX"
 
 rssLimit = 20
 copyright = "2022 Tim Misiak"
-languageCode = "en-us"
 
 [author]
   name = "Tim Misiak"
@@ -41,3 +40,8 @@ languageCode = "en-us"
   icon = "youtube"
   name = "YouTube"
   url = "https://www.youtube.com/channel/UCyQ7p63-9V9PZJvgHLKgsaw"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
