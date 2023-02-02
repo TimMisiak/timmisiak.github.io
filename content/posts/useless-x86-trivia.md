@@ -4,13 +4,13 @@ date: 2023-02-01T23:54:20-08:00
 draft: false
 ---
 
-If you've read my [first post about assembly language](/posts/fakers-guide-to-assembly), you might expect that this is another post on how to understand assembly language. I will write more about that at some point, but this post is not that. Instead, this post is going to talk about some of the weird things I learned while writing an x86 and amd64 emulator. The emulator I wrote was for [Time Travel Debugging](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/time-travel-debugging-overview). One piece of the TTD technology is a CPU emulator, which is used to record the entire execution of a process at an instruction level. The first version of TTD was called iDNA, and the emulator for iDNA was written almost completely in assembly code, which was very fast for the time, but was completely unmaintainable as you can imagine.
+If you've read my [first post about assembly language](/posts/fakers-guide-to-assembly), you might expect that this is another post on how to understand assembly language. I will write more about that at some point, but this post is not that. Instead, this post is going to talk about some of the weird things and random trivia I learned while writing an x86 and amd64 emulator. The emulator I wrote was for [Time Travel Debugging](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/time-travel-debugging-overview). One piece of TTD is a CPU emulator, which is used to record the entire execution of a process at an instruction level. The first version of TTD was called iDNA, and the emulator for iDNA was written almost completely in assembly code, which was fast but difficult to maintain and extend.
 
-I wasn't involved in the first version of TTD, but I was involved in the second version where we rewrote the emulation portion (and eventually most other parts). The new one was written in C++, and we aimed to achieve most of the performance of the assembly language version while having a more maintainable code base. Writing a CPU emulator is, in my opinion, the best way to *REALLY* understand how a CPU works. You need to pay attention to every detail. This post is a somewhat random collection of the things I learned. If you have a lot of experience with x86 this might be old news, but maybe a few are things you haven't seen before.
+I wasn't involved in the first version of TTD, but I was involved in the second version where we rewrote the emulation portion (and eventually most other parts). The new one was written in C++, and we aimed to achieve most of the performance of the assembly language version while having a more maintainable code base. Writing a CPU emulator is, in my opinion, the best way to *REALLY* understand how a CPU works. You need to pay attention to every detail. This post is a somewhat random collection of the things I learned. If you have a lot of experience with x86 these might be old news, but maybe a few are things you haven't seen before.
 
 # Useless x86 encoding trivia
 
-The x86 encoding scheme is a bit funny in that there are often multiple ways to encode the exact same instruction. The ```int 3``` instruction can be encoded as ```CD 03```, but can also be encoded in a single byte of ```CC```. This is a very useful encoding because ```int 3``` is used as a software breakpoint. That way, it's always possible to set a breakpoint at any point in a function, even if it's an instruction that lands at the end of a memory page (with no page mapped after it). Many of the encodings are just designed to be shorter for some common cases. Adding an immediate value to ```EAX``` or ```RAX``` with the ```ADD``` instruction can be expressed in a compact form. For instance:
+The x86 encoding scheme is a bit funny in that there are often multiple ways to encode the exact same instruction. The ```int 3``` instruction can be encoded as ```CD 03```, but can also be encoded in a single byte of ```CC```. This is a very useful encoding because ```int 3``` is used as a software breakpoint. That way, it's always possible to set a breakpoint at any point in a function, even if it's an instruction that lands at the end of a memory page (with no page mapped after it). Many of these alternate encodings are designed to be shorter for some common case. For instance, adding an immediate value to ```EAX``` or ```RAX``` with the ```ADD``` instruction can be expressed in a compact form that's shorter than the more general instruction. An ```add eax, ...``` instruction can be encoded like this:
 
 ```
 05cccccccc      add     eax,0CCCCCCCCh
@@ -22,9 +22,9 @@ Doing the same for ECX takes an extra byte:
 81c1cccccccc    add     ecx,0CCCCCCCCh
 ```
 
-So while both registers are general purpose, the fact that ```EAX``` is called the "Accumulator register" is not just a convention, it actually makes a difference to the encoding (and potentially the performance, as a result).
+So while both registers are general purpose, the fact that ```EAX``` is called the "Accumulator register" is not just a convention, it actually makes a difference to the encoding (and potentially the performance, as a result). Compilers tend to be very smart, and can take advantage of these shorter encodings whenever possible. Shorter instructions mean less data transferred from main memory, and more instructions that can fit in the instruction cache, which is good for performance. 
 
-Equivalent instructions are more than just multiple encodings. Instructions in x86 can take "prefix bytes" which modify the behavior of the instruction. The "REX" set of prefixes are commonly used in 64 bit code to access a wider range of registers compared to 32-bit code (and make code sequences [easier to recognize](/posts/recognizing-patterns)). An x86 CPU will happily take one of these prefixes, even if it doesn't have any effect. Put a "REX" byte on an 8-bit add, and it does nothing:
+There are other ways to have equivalent instructions besides just alternate encodings. Instructions in x86 can take "prefix bytes" which modify the behavior of the instruction. The "REX" set of prefixes are commonly used in 64 bit code to access a wider range of registers compared to 32-bit code (and make code sequences [easier to recognize](/posts/recognizing-patterns)). An x86 CPU will happily take one of these prefixes, even if it doesn't have any effect. Put a "REX" byte on an 8-bit add, and it does nothing:
 
 ```
 4004cc          add     al,0CCh
@@ -119,9 +119,9 @@ This instruction says that it will shift the eax register 0x20 (32 decimal) bits
 
 # Segment overrides
 
-While segmented memory might make you think we are back in the days of 16-bit code, it turns out that segments are alive and well in 32-bit and 64-bit code, and they can have real effects. We tend not to think about them very much because for the most part every OS uses a mostly-flat memory model and all of the segments have a base address of 0. There is one exception, and that tends to be for thread local storage, where one of the "extra segment registers" is used, either ```FS``` or ```GS``` (or both).
+While segmented memory might make you think we are back in the days of 16-bit code, it turns out that segments are alive and well in 32-bit and 64-bit code, and they can have real effects. We tend not to think about them very much because for the most part every OS uses a mostly-flat memory model and all of the segments have a base address of 0.<sup>3</sup> The exception to this tends to be for thread local storage, where one of the "extra segment registers" is used, either ```FS``` or ```GS``` (or both).
 
-What can complicate things is the fact that usermode code doesn't have access to the "Global Descriptor Table" which tells you the segment attributes like the base address. So if you want to know what flat address corresponds to ```GS:0x12345678```, there's no way to determine that directly unless the OS has a way of querying this information. On Windows, these registers are used for referring to the TEB (Thread Execution Block), and these structures conveniently have a "self" pointer with a flat address to the start of the structure, which also happens to be the base of the segment.
+What can complicate things is the fact that usermode code doesn't have access to the CPU configuration that determines the base address of the FS or GS segments. So if you want to know what flat address corresponds to ```GS:0x12345678```, there's no way to determine that directly unless the OS has a way of querying this information. On Windows, these registers are used for referring to the TEB (Thread Execution Block), and these structures conveniently have a "self" pointer with a flat address to the start of the structure, which also happens to be the base of the segment.
 
 In 32-bit processes, the TEB is located using ```FS```. We can see how the OS does this by looking at the definition of the GetLastError function, which simply accesses a field out of the TEB.
 
@@ -159,6 +159,30 @@ KERNELBASE!GetLastError:
 
 It might seem odd that that 64-bit processes use a different segment register for the TEB than a 32-bit process, but there is a very good reason for this. A 32-bit process on a 64-bit OS will have both a 32-bit TEB *and* a 64-bit TEB, and in some contexts it can be useful to have access to both TEBs (such as the 64-bit WOW code that runs in a 32-bit process).
 
+# Segment overrides: More trivia
+
+I mentioned earlier that the base address of the FS segment and GS segment is determined by CPU configuration. You might be wondering "what CPU configuration?" And the answer is,  "it depends". Specifically, it depends on whether you're in 32-bit mode or 64-bit mode. In 32-bit mode, the actual value of the segment register is used to reference a segment descriptor (defined by the [Global Descriptor Table](https://wiki.osdev.org/Global_Descriptor_Table) and [Local Descriptor Table](https://wiki.osdev.org/Local_Descriptor_Table)). But in 64-bit mode, the base is controlled by two MSRs, the FS Base (IA32_FS_BASE in the Intel SDM) and GS Base (IA32_GS_BASE). A side effect of this scheme is that the actual value of FS and GS don't matter at all in 64-bit mode. You can see the effect of this in WinDbg by trying to directly read from something in one of those segments. When debugging a 32-bit process, you can dump the contents of the "FS segment" by using the value of the FS register:
+
+```
+0:000> rfs
+fs=00000053
+0:000> db 53:0
+0053:00000000  60 f2 2f 03 00 00 30 03-00 30 20 03 00 00 00 00 `./...0..0 .....
+```
+
+If you try the same thing on a 64-bit process, it doesn't work because the segment values don't matter, only the segment override prefixes!
+
+```
+0:000> rfs
+fs=0053
+0:000> db 53:0
+0053:00000000`00000000  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+0:000> rgs
+gs=002b
+0:000> db 2b:0
+002b:00000000`00000000  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+```
+
 # Roll credits
 
 This turned out to be a pretty random list of x86 trivia. Most of it totally useless unless you want to write an emulator (which I *highly* recommend if you ever get the chance). I still think it's sort of interesting, and gives a little bit of insight into how things "really work". Some of this I learned through trial and error, but I had some great mentors while writing an x86 emulator, one of whom was Darek Mihocka, who has been doing emulators long enough that he owns [emulators.com](http://emulators.com/). I'd never claim to be an expert myself, but if this sort of thing is interesting to you make sure to check out the fantastic resources on [Agner Fog's website](https://www.agner.org/optimize/). As usual, if I made any mistakes or if you have any questions, let me know on [Twitter](https://twitter.com/timmisiak) or [Mastodon](https://dbg.social/@tim)!
@@ -168,3 +192,5 @@ This turned out to be a pretty random list of x86 trivia. Most of it totally use
 <sup>1</sup> There are some other limits on prefixes on older CPUs, but the 15 byte limit applies even on newer CPUs. Besides the length limitation, some prefixes are also more strict about when they can be used, such as the ```LOCK``` prefix (F0)
 
 <sup>2</sup> This actually came up in an interview question at Microsoft. My interviewer was asking me all the ways you could clear a 32-bit register in a single instruction. He was convinced that using a shift would work and didn't believe me when I said it wasn't possible.
+
+<sup>3</sup> When executing in 64-bit mode, the segment base of CS, DS, ES, and SS are always treated as 0 by the CPU.
