@@ -1,7 +1,7 @@
 ---
 title: "Weird things I learned while writing an x86 emulator"
-date: 2023-01-09T23:54:20-08:00
-draft: true
+date: 2023-02-01T23:54:20-08:00
+draft: false
 ---
 
 If you've read my [first post about assembly language](/posts/fakers-guide-to-assembly), you might expect that this is another post on how to understand assembly language. I will write more about that at some point, but this post is not that. Instead, this post is going to talk about some of the weird things I learned while writing an x86 and amd64 emulator. The emulator I wrote was for [Time Travel Debugging](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/time-travel-debugging-overview). One piece of the TTD technology is a CPU emulator, which is used to record the entire execution of a process at an instruction level. The first version of TTD was called iDNA, and the emulator for iDNA was written almost completely in assembly code, which was very fast for the time, but was completely unmaintainable as you can imagine.
