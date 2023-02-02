@@ -92,6 +92,7 @@ ntdll!LdrpDoDebuggerBreak+0x30:
 00007ff8`4bfc0950 40eb00          jmp     ntdll!LdrpDoDebuggerBreak+0x33 (00007ff8`4bfc0953)
 ```
 
+The ```inc eax``` here got turned into a useless REX prefix modifying the next instruction, instead of actually being an ```inc``` instruction.
 
 # Odd flag quirks
 
@@ -123,7 +124,7 @@ While segmented memory might make you think we are back in the days of 16-bit co
 
 What can complicate things is the fact that usermode code doesn't have access to the CPU configuration that determines the base address of the FS or GS segments. So if you want to know what flat address corresponds to ```GS:0x12345678```, there's no way to determine that directly unless the OS has a way of querying this information. On Windows, these registers are used for referring to the TEB (Thread Execution Block), and these structures conveniently have a "self" pointer with a flat address to the start of the structure, which also happens to be the base of the segment.
 
-In 32-bit processes, the TEB is located using ```FS```. We can see how the OS does this by looking at the definition of the GetLastError function, which simply accesses a field out of the TEB.
+In 32-bit processes, the TEB is located using ```FS```. We can see how the OS does this by looking at the disassembly of the GetLastError function, which simply accesses a field out of the TEB.
 
 ```
 0:000> u kernelbase!GetLastError
@@ -161,7 +162,7 @@ It might seem odd that that 64-bit processes use a different segment register fo
 
 # Segment overrides: More trivia
 
-I mentioned earlier that the base address of the FS segment and GS segment is determined by CPU configuration. You might be wondering "what CPU configuration?" And the answer is,  "it depends". Specifically, it depends on whether you're in 32-bit mode or 64-bit mode. In 32-bit mode, the actual value of the segment register is used to reference a segment descriptor (defined by the [Global Descriptor Table](https://wiki.osdev.org/Global_Descriptor_Table) and [Local Descriptor Table](https://wiki.osdev.org/Local_Descriptor_Table)). But in 64-bit mode, the base is controlled by two MSRs, the FS Base (IA32_FS_BASE in the Intel SDM) and GS Base (IA32_GS_BASE). A side effect of this scheme is that the actual value of FS and GS don't matter at all in 64-bit mode. You can see the effect of this in WinDbg by trying to directly read from something in one of those segments. When debugging a 32-bit process, you can dump the contents of the "FS segment" by using the value of the FS register:
+I mentioned earlier that the base address of the FS segment and GS segment is determined by CPU configuration. You might be wondering "what CPU configuration?" And the answer is "it depends". Specifically, it depends on whether you're in 32-bit mode or 64-bit mode. In 32-bit mode, the actual value of the segment register is used to reference a segment descriptor (defined by the [Global Descriptor Table](https://wiki.osdev.org/Global_Descriptor_Table) and [Local Descriptor Table](https://wiki.osdev.org/Local_Descriptor_Table)). But in 64-bit mode, the base is controlled by two MSRs, the FS Base (IA32_FS_BASE in the Intel SDM) and GS Base (IA32_GS_BASE). A side effect of this scheme is that the actual value of FS and GS don't matter at all in 64-bit mode. You can see the effect of this in WinDbg by trying to directly read from something in one of those segments. When debugging a 32-bit process, you can dump the contents of the "FS segment" by using the value of the FS register:
 
 ```
 0:000> rfs
