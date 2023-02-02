@@ -12,7 +12,7 @@ copyright = "2022 Tim Misiak"
 
 [params]
   author = "Tim Misiak"
-  description = "The art and science of debugging. Windows debugging tips from a WinDbg dev"
+  description = "The art and science of debugging. And other stuff like that. From a former developer on WinDbg and the VMware hypervisor."
   favicon = "WinDbg.ico"
   avatar = "avatar.jpg"
 
