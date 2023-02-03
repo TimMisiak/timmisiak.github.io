@@ -122,7 +122,11 @@ This instruction says that it will shift the eax register 0x20 (32 decimal) bits
 
 While segmented memory might make you think we are back in the days of 16-bit code, it turns out that segments are alive and well in 32-bit and 64-bit code, and they can have real effects. We tend not to think about them very much because for the most part every OS uses a mostly-flat memory model and all of the segments have a base address of 0.<sup>3</sup> The exception to this tends to be for thread local storage, where one of the "extra segment registers" is used, either ```FS``` or ```GS``` (or both).
 
-What can complicate things is the fact that usermode code doesn't have access to the CPU configuration that determines the base address of the FS or GS segments. So if you want to know what flat address corresponds to ```GS:0x12345678```, there's no way to determine that directly unless the OS has a way of querying this information. On Windows, these registers are used for referring to the TEB (Thread Execution Block), and these structures conveniently have a "self" pointer with a flat address to the start of the structure, which also happens to be the base of the segment.
+~~What can complicate things is the fact that usermode code doesn't have access to the CPU configuration that determines the base address of the FS or GS segments. So if you want to know what flat address corresponds to ```GS:0x12345678```, there's no way to determine that directly unless the OS has a way of querying this information.~~
+
+**CORRECTION**: [Sixtyvividtails points out](https://twitter.com/sixtyvividtails/status/1621532553873080322) that you can read the base of fs/gs segs using the rdfsbase/wrfsbase/rdgsbase/wrgsbase instructions, which are available in unprivileged code. These instructions are available starting on Ivy Bridge (from 2012). Thanks for the correction, sixtyvividtails!
+
+On Windows, these registers are used for referring to the TEB (Thread Execution Block), and these structures conveniently have a "self" pointer with a flat address to the start of the structure, which also happens to be the base of the segment.
 
 In 32-bit processes, the TEB is located using ```FS```. We can see how the OS does this by looking at the disassembly of the GetLastError function, which simply accesses a field out of the TEB.
 
