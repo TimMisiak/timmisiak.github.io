@@ -30,7 +30,7 @@ The second way to attach to a process is by creating the process in an attached 
 
 We'll use CreateProcessW to start debugging a process:
 
-```rust {linenos=true,lineNumbersInTable=false,linenostart=114}
+```rust {linenos=true,lineNumbersInTable=false,linenostart=105}
     let mut si: STARTUPINFOEXW = unsafe { std::mem::zeroed() };
     si.StartupInfo.cb = std::mem::size_of::<STARTUPINFOEXW>() as u32;
     let mut pi: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
@@ -49,7 +49,7 @@ We'll use CreateProcessW to start debugging a process:
         )
     };
 ```
-<small>[main.rs line 114](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L114)</small>
+<small>[main.rs line 114](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L105)</small>
 
 There are a lot of parameters to CreateProcessW, but we can ignore the optional parameters to start. Later, we may want to give a user of this debugger the ability to customize certain aspects, but for now we'll simply use the entire command line passed in as the lpCommandLine. If you want to see how we got the command line to launch, see [parse_command_line in the github repo](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L29) for this project. We'll also pass ```DEBUG_ONLY_THIS_PROCESS``` flag as part of dwCreationFlags. I've also specified ```CREATE_NEW_CONSOLE``` so that we won't share a console when we debug a console app (CDB/NTSD will share a console with the target and I always found that confusing, and rarely useful). Finally, we'll receive some [important information](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/ns-processthreadsapi-process_information) as part of the lpProcessInformation parameter, which is an output parameter.
 
@@ -59,14 +59,14 @@ When CreateProcessW returns, the process will be initially suspended. No code wi
 
 Two functions are used to drive the event loop for a debugger in Windows. The first is the [WaitForDebugEventEx](https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-waitfordebugeventex) function<sup>3</sup>. The second function is [ContinueDebugEvent](https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-continuedebugevent), which will resume the target process after handling the event. We will call these functions from [main_debugger_loop](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L61).
 
-```rust {linenos=true,lineNumbersInTable=false,linenostart=62}
+```rust {linenos=true,lineNumbersInTable=false,linenostart=56}
     loop {
         let mut debug_event: DEBUG_EVENT = unsafe { std::mem::zeroed() };
         unsafe {
             WaitForDebugEventEx(&mut debug_event, INFINITE);
         }
 ```
-<small>[main.rs line 62](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L62)</small>
+<small>[main.rs line 56](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L56)</small>
 
 Something interesting you might note here is that the ```WaitForDebugEventEx``` function does not take in any process identifier. If a process is attached to multiple target processes, any call into WaitForDebugEventEx will monitor events for *all* attached processes<sup>4</sup>. The ```INFINITE``` parameter means that we will wait forever until a debug event is received. The event is described as a [DEBUG_EVENT](https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-debug_event) structure, which has fields for the thread ID, process ID, and an event code. Each event type has its own data structure, and the structures are stored as a union. You use the event code to determine which structure in the union is valid.
 
@@ -91,7 +91,7 @@ typedef struct _DEBUG_EVENT {
 
 We'll dig into that data in a later post. For now, we can just output which event we received.
 
-```rust {linenos=true,lineNumbersInTable=false,linenostart=68}
+```rust {linenos=true,lineNumbersInTable=false,linenostart=62}
         match debug_event.dwDebugEventCode {
             EXCEPTION_DEBUG_EVENT => println!("Exception"),
             CREATE_THREAD_DEBUG_EVENT => println!("CreateThread"),
@@ -105,20 +105,20 @@ We'll dig into that data in a later post. For now, we can just output which even
             _ => panic!("Unexpected debug event"),
         }
 ```
-<small>[main.rs line 68](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L68)</small>
+<small>[main.rs line 62](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L62)</small>
 
 We will loop forever handling debug events, but if we get an ```EXIT_PROCESS_DEBUG_EVENT```, we can just exit the loop because we are only debugging a single process.
 
-```rust {linenos=true,lineNumbersInTable=false,linenostart=81}
+```rust {linenos=true,lineNumbersInTable=false,linenostart=75}
         if debug_event.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT {
             break;
         }
 ```
-<small>[main.rs line 81](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L81)</small>
+<small>[main.rs line 75](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L75)</small>
 
 When we are done handling the event, we'll call [ContinueDebugEvent](https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-continuedebugevent), which will allow the target process to resume execution. This function takes three parameters: a process ID, a thread ID, and a "continue status". The first two are straightforward, and we can just use the process ID and thread ID that were fields of the ```DEBUG_EVENT```. The continue status is a bit less obvious. It can be used to suppress the normal exception handling behavior by passing ```DBG_EXCEPTION_HANDLED```. For now, we won't worry about that and just always pass in ```DBG_EXCEPTION_NOT_HANDLED```
 
-```rust {linenos=true,lineNumbersInTable=false,linenostart=85}
+```rust {linenos=true,lineNumbersInTable=false,linenostart=79}
         unsafe {
             ContinueDebugEvent(
                 debug_event.dwProcessId,
@@ -127,7 +127,7 @@ When we are done handling the event, we'll call [ContinueDebugEvent](https://lea
             );
         }
 ```
-<small>[main.rs line 85](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L85)</small>
+<small>[main.rs line 79](https://github.com/TimMisiak/dbgrs/blob/part1/src/main.rs#L79)</small>
 
 # Putting it together
 
