@@ -1,5 +1,5 @@
 ---
-title: "Writing a Debugger From Scratch - DbgRs Part 1"
+title: "Writing a Debugger From Scratch - DbgRs Part 1 - Attaching to a Process"
 date: 2023-02-13T9:20:24-07:00
 draft: false
 ---
