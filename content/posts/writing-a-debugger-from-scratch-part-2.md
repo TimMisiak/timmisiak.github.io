@@ -227,7 +227,3 @@ r14=0x000001ee3e064700 r15=0x0000000000800000 eflags=0x00000246
 ```
 
 What we have now is something incredibly close to what we could really call "a debugger". You can continue execution, you can step through code, and you can examine the registers. There are a few really big things missing that prevent this from actually being useful, and most of them have to do with the memory of the target process. This debugger can't read or write from the targets memory, and that means it can't do a number of other important things like resolving symbolic names or displaying disassembly. We'll start to tackle that in the next part. Until then, let me know what you thought of this on [Twitter](https://twitter.com/timmisiak) or [Mastodon](https://dbg.social/@tim)!
-
-# We're hiring!
-
-If you read this far, you should know that my company is hiring! I started [Augmend](https://augmend.com) with [Diamond Bishop](https://twitter.com/diamondbishop) to make AI-augmented systems for software engineers to collaborate. We think that making it easier to collaborate with both people and AI assistants is going to speed up the entire software lifecycle, from writing code, testing code, debugging code, and more. Excited about dev tools and AI? Check out our [careers page](https://augmend.com/careers) and see if there's a role that interests you!
