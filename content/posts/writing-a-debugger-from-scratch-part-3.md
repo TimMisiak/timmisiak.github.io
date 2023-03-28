@@ -137,7 +137,7 @@ Using the instruction pointer, we have an address that we can use to dump the co
 48 83 EC 78 4C 8B C9 48 8B 05 62 99 11 00 48 85 
 ```
 
-I can recognize these bytes as x64 assembly code, so it looks like this is working. (How did I recognize these bytes as code? I wrote about this in my post about [recognizing patterns in memory](recognizing-patterns.md)).
+I can recognize these bytes as x64 assembly code, so it looks like this is working. (How did I recognize these bytes as code? I wrote about this in my post about [recognizing patterns in memory](/posts/recognizing-patterns.md)).
 
 There are a few other places where reading memory can give us better information, but before we go any further we should wrap the ReadProcessMemory call so it's a bit easier and safer to use. We're going to need to read all sorts of data types of data, including things like UTF-16 strings<sup>1</sup>, and we don't want to see these verbose ReadProcessMemory calls everywhere. We'll also want to start creating a level of abstraction so that we can handle reading memory from other sources besides just a live process (for instance, crash dump files).
 
