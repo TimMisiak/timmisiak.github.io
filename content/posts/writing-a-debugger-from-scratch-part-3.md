@@ -1,7 +1,7 @@
 ---
 title: "Writing a Debugger From Scratch - DbgRs Part 3 - Reading Memory"
-date: 2023-03-19T16:54:19-07:00
-draft: true
+date: 2023-03-28T10:14:19-07:00
+draft: false
 ---
 
 (New to this series? Consider starting from [part 1](/posts/writing-a-debugger-from-scratch-part-1))
@@ -153,6 +153,7 @@ pub trait MemorySource {
     fn read_memory(&self, address: u64, len: usize) -> Result<Vec<Option<u8>>, &'static str>;
 }
 ```
+<small>[memory.rs](https://github.com/TimMisiak/dbgrs/blob/part3/src/memory.rs)</small>
 
 On top of this trait, we'll have some helper functions that let us read strings and other structures. I'll leave the definitions out for brevity (and since they're not particularly interesting), but you can check the github repo to see how these are implemented.<sup>2</sup>
 
@@ -173,6 +174,7 @@ pub fn read_memory_string(
     is_wide: bool,
 ) -> Result<String, &'static str> { ... }
 ```
+<small>[memory.rs](https://github.com/TimMisiak/dbgrs/blob/part3/src/memory.rs)</small>
 
 # Reading debug output strings
 
@@ -247,6 +249,7 @@ Note that the ```lpImageName``` field is not always provided, so we have to hand
         };
     }
 ```
+<small>[main.rs](https://github.com/TimMisiak/dbgrs/blob/part3/src/main.rs)</small>
 
 Testing this again and we see the expected output!
 
@@ -268,7 +271,7 @@ LoadDll: 7FFD3D5B0000   C:\WINDOWS\System32\msvcrt.dll
 [BD14] 0x00007ffd3da2d5c4
 ```
 
-You might note that the very first module load is missing a name. Using an instance of WinDbg with a [noninvasive attach](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/noninvasiv-debugging--user-mode-), we can use the [!dh](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/-dh) or [.imgscan](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/-imgscan--find-image-headers-) commands to examine the module at that address
+You might note that the very first module load is missing a name, and this is one of the cases where the provided ```lpImageName``` field is null. Using an instance of WinDbg with a [noninvasive attach](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/noninvasiv-debugging--user-mode-), we can use the [!dh](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/-dh) or [.imgscan](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/-imgscan--find-image-headers-) commands to examine the module at that address.
 
 ```
 0:000> .imgscan
@@ -288,7 +291,7 @@ Debug Directories(4)
 	cv           22      140160   13d360	Format: RSDS, guid, 1, ntdll.pdb
 ```
 
-From that, we can see that this module is ntdll.dll, which is definitely a bit of a "special" module, so it's not really a surprise that it's the only module with a missing name. We could add some additional logic to deduce the module name when it isn't returned as part of the ```LOAD_DLL_DEBUG_EVENT```, but we can revisit this once we do more interpretation of the memory in a module.
+From this output, we can see that the module is ntdll.dll, which is definitely a bit of a "special" module so it's not really a surprise that it's the only module with a missing name. We could add some additional logic to deduce the module name when it isn't returned as part of the ```LOAD_DLL_DEBUG_EVENT```, but we can revisit this once we do more interpretation of the memory in a module.
 
 # Memory done, what's next?
 
@@ -298,6 +301,6 @@ Are you enjoying this series? Have a question or suggestion? Let me know! You ca
 
 ## Footnotes
 
-<sup>1</sup> I always feel weird calling Windows wide strings "UTF-16", because that's not quite right, for a number of reasons (for instance, most Windows APIs are happy to accept invalid UTF-16, like invalid surrogate pairs). Usually, it's reasonable to just ignore the problem entirely and pretend that it's just UTF-16, but when writing diagnostic tools I think it's important to handle bad data in a way that doesn't hide information or simply fail. Someone could be debugging a problem related to text encoding. I'll probably just refer to these as "wide strings" most of the time.
+<sup>1</sup> I always feel weird calling Windows wide strings "UTF-16", because that's not quite right, for a number of reasons (for instance, most Windows APIs are happy to accept invalid UTF-16, like invalid surrogate pairs). Usually, it's reasonable to just ignore the problem entirely and pretend that it's just UTF-16, but when writing diagnostic tools I think it's important to handle bad data in a way that doesn't hide information or simply fail. Someone could be debugging a problem related to text encoding, and it's important to give users enough information to diagnose the issue.
 
-<sup>2</sup> I'm also not really happy with how it's implemented. I suspect there is a safer, Rust-ier way to do it. You can see the code in [memory.rs](https://github.com/TimMisiak/dbgrs/blob/main/src/memory.rs). Feel free to give suggestions on how to implement it better.
+<sup>2</sup> I'm also not completely happy with how it's implemented. I suspect there is a safer, Rust-ier way to do it. You can see the code in [memory.rs](https://github.com/TimMisiak/dbgrs/blob/part3/src/memory.rs). Feel free to give suggestions on how to implement it better.
