@@ -1,7 +1,7 @@
 ---
 title: "Writing a Debugger From Scratch - DbgRs Part 4 - Exports and Private Symbols"
-date: 2023-05-28T10:28:40-07:00
-draft: true
+date: 2023-05-29T15:28:40-07:00
+draft: false
 ---
 
 (New to this series? Consider starting from [part 1](/posts/writing-a-debugger-from-scratch-part-1))
@@ -12,7 +12,7 @@ The code for this post is in the [part4 branch on github](https://github.com/Tim
 
 # Where are the modules?
 
-Before we can start reading the exports or private symbols of a module, we need to know what moduels are loaded and what address they are loaded at. Luckily, we already have a handler for LOAD_DLL_DEBUG_EVENT that comes from WaitForDebugEventEx, which includes both the address and the name. We'll keep a list of all loaded modules so we can easily find which module is associated with an address, and then consult the information for that module to map the address to a name. Since a loaded module instance is associated with a process, we'll create a Process struct to keep track of all of the loaded modules.
+Before we can start reading the exports or private symbols of a module, we need to know what modules are loaded and where they are loaded. We already have a handler for LOAD_DLL_DEBUG_EVENT that comes from WaitForDebugEventEx, which includes both the address and the name. We'll keep a list of all loaded modules so we can easily find which module is associated with an address, and then consult the information for that module to map the address to a name. Since a loaded module instance is associated with a process, we'll create a Process struct to keep track of all of the loaded modules.
 
 ```rust
 pub struct Process {
@@ -20,7 +20,7 @@ pub struct Process {
 }
 ```
 
-We'll give it a function for adding a module to the loaded list, and defer to the Module object for doing the parsing.
+We'll make a function for adding a module to the loaded list, and defer to the Module object for doing the parsing.
 
 ```rust
 impl Process {
@@ -28,7 +28,8 @@ impl Process {
         Process { module_list: Vec::new() }
     }
 
-    pub fn add_module(&mut self, address: u64, name: Option<String>, memory_source: &dyn MemorySource) -> Result<&Module, &'static str> {
+    pub fn add_module(&mut self, address: u64, name: Option<String>, memory_source: &dyn MemorySource) ->
+            Result<&Module, &'static str> {
         let module = Module::from_memory_view(address, name, memory_source)?;
         self.module_list.push(module);
         Ok(self.module_list.last().unwrap())
@@ -44,19 +45,20 @@ We're passing in all the information that will be needed to understand the modul
 
 Now we're ready to start parsing the information in the module. Windows modules are generally "PE files", or "Portable Executable". The PE format is [fairly well documented](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format), but it will be easier to understand if you look at a diagram of the structure. The diagram to the right is the 32-bit PE format (PE32), but this is essentially the same as the 64-bit format (PE32+) with a <a aria-describedby="footnote-label" href="#pe32-64">few small differences</a>.
 
-The first few headers are there for legacy reasons. The ```IMAGE_DOS_HEADER``` exists so that executables would be recognized by DOS. At the end of this header is a field called ```e_lfanew``` which is the offset to the "real" header. The "DOS stub" that is after this header was used so that a windows executable run under DOS would display a message saying "This program cannot be run in DOS mode". That stub weirdly persists to this day, and even exists in DLLs where it's hard to imagine anyone would try to run them directly.
+The first few headers are there for legacy reasons. The ```IMAGE_DOS_HEADER``` exists so that executables would be recognized by DOS. At the end of this header is a field called ```e_lfanew``` which is the offset to the "real" header. The "DOS stub" that is after this header was used so that a Windows executable run under DOS would display a message saying "This program cannot be run in DOS mode". That stub weirdly persists to this day, and even exists in DLLs where it's hard to imagine anyone would try to run them directly.
 
-We can ignore everything else in the DOS header and go straight to reading the "real" header, which is the windows header. This part is a few structs that are laid out consecutively in memory, and the "optional" header <a aria-describedby="footnote-label" href="#optional-header">isn't really optional for image files</a>, so we can read them all at once as a single structure read. Conveniently, the [```IMAGE_NT_HEADERS64```](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-image_nt_headers64) struct contains the ```IMAGE_FILE_HEADER``` (called "COFF Header" in the diagram) and the [```IMAGE_OPTIONAL_HEADER64```](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-image_optional_header64) (called the "optional header" in the diagram). A few fields are interesting here, such as the <a aria-describedby="footnote-label" href="#size-of-image">SizeOfImage field that tells us how large the image is</a>.
+We can ignore everything else in the DOS header and go straight to reading the "real" header, which is the Windows header. This part is a few structs that are laid out consecutively in memory, and the "optional" header <a aria-describedby="footnote-label" href="#optional-header">isn't really optional for image files</a>, so we can read them all at once as a single structure read. Conveniently, the [```IMAGE_NT_HEADERS64```](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-image_nt_headers64) struct contains the ```IMAGE_FILE_HEADER``` (called "COFF Header" in the diagram) and the [```IMAGE_OPTIONAL_HEADER64```](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-image_optional_header64) (called the "optional header" in the diagram). A few fields are interesting here, such as the <a aria-describedby="footnote-label" href="#size-of-image">SizeOfImage field that tells us how large the image is</a>.
 
 There are two tables in the header that describe the rest of the data in the file. The first is the "section table" which describes how each part of the image file should be loaded into memory, including information like what address the section should be loaded at and the size of the section. It also contains flags marking whether the section should be readable, writable, and/or executable. For instance, any sections containing code should be marked as readable and executable, while sections containing globals should be readable and writable. Each section also has a name. The names can be nearly anything, although there are some [reserved names with special meaning](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#special-sections), such as ".text" for the code section or ".data" for initialized data. Note that most "pointers" to data in the file are described as "RVAs" or "[Relative Virtual Addresses](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#general-concepts)". This means that the address are relative to the start of the image *after* it's loaded into memory. This is important to know when interpreting a file on disk, but since we are reading from images that are already loaded into memory with sections at the expected addresses, we can ignore the section table for the moment. Each time we see an RVA, we can just add it to the module base address and we'll get the correct location.
 
 The second table is the "directory table", and is the more interesting one for us right now. The size of the table is described by the NumberOfRvaAndSizes field of the optional header and is typically 16 entries. Each entry of the table just has an RVA and length describing the location of the data. The role of each entry is determined by the index. For instance, the export table is always at index 0 and has a corresponding constant ```IMAGE_DIRECTORY_ENTRY_EXPORT```. You can see this as the first entry in the diagram on the right, labled "ExportTable".
 
-Although this has been a long explanation describing the structure of the headers, all we need to do so far is to read the DOS header, find the offset to the windows header, and then read the Windows header so that we can get to the data directories.
+Although this has been a long explanation describing the structure of the headers, all we need to do so far is to read the DOS header, find the offset to the Windows header, and then read the Windows header so that we can get to the data directories.
 
 ```rust
 impl Module {
-    pub fn from_memory_view(module_address: u64, module_name: Option<String>, memory_source: &dyn MemorySource) -> Result<Module, &'static str> {
+    pub fn from_memory_view(module_address: u64, module_name: Option<String>, memory_source: &dyn MemorySource) -> 
+            Result<Module, &'static str> {
 
         let dos_header: IMAGE_DOS_HEADER = memory::read_memory_data(memory_source, module_address)?;
         // NOTE: Do we trust that the headers are accurate, even if it means we could read outside the bounds of the
@@ -100,7 +102,9 @@ The exports are described as two logical tables. The first is the addresses of t
 
 ```rust
         let address_table_address = module_address + export_directory.AddressOfFunctions as u64;
-        let address_table = memory::read_memory_full_array::<u32>(memory_source, address_table_address, export_directory.NumberOfFunctions as usize)?;
+        let address_table = memory::read_memory_full_array::<u32>(memory_source,
+                                                                  address_table_address,
+                                                                  export_directory.NumberOfFunctions as usize)?;
 ```
 
 The second table is the "name table" which maps ordinals to names. It is a single logical table stored in the file as two parallel arrays, one containing the ordinals and one containing <a aria-describedby="footnote-label" href="#name-ordinal-table">RVAs to the names</a>. The ```NumberOfNames``` field describes the number of entries in both arrays, and the ```AddressOfNameOrdinals``` and ```AddressOfNames``` are the RVAs to each array.
@@ -109,9 +113,13 @@ The second table is the "name table" which maps ordinals to names. It is a singl
         // We'll read the name table first, which is essentially a list of (ordinal, name) pairs that give names 
         // to some or all of the exports. The table is stored as parallel arrays of orindals and name pointers
         let ordinal_array_address = module_address + export_directory.AddressOfNameOrdinals as u64;
-        let ordinal_array = memory::read_memory_full_array::<u16>(memory_source, ordinal_array_address, export_directory.NumberOfNames as usize)?;
+        let ordinal_array = memory::read_memory_full_array::<u16>(memory_source,
+                                                                  ordinal_array_address,
+                                                                  export_directory.NumberOfNames as usize)?;
         let name_array_address = module_address + export_directory.AddressOfNames as u64;
-        let name_array = memory::read_memory_full_array::<u32>(memory_source, name_array_address, export_directory.NumberOfNames as usize)?;
+        let name_array = memory::read_memory_full_array::<u32>(memory_source,
+                                                               name_array_address,
+                                                               export_directory.NumberOfNames as usize)?;
 ```
 
 As I mentioned previously, not all exports have names. These can be referenced by "ordinal", which is an index into the table. The ```Base``` field of the export table describes the ordinal of the first element of the table. So if this value is 100, then finding ordinal 105 in the export would be at index number 5 in the address table.
@@ -231,7 +239,7 @@ For now we'll just do a linear search over the exports and find the closest expo
     }
 ```
 
-We'll do the same thing for the symbols in the pdb. Once we find the closest match, we'll return a string that represents the symbol or the symbol with an offset.
+We'll do the same thing for the symbols in the pdb. Once we find the closest match, we'll return a string that represents the symbol and add a "+offset" suffix if the address isn't an exact match.
 
 ```rust
     if let AddressMatch::Export(closest) = closest {
