@@ -30,7 +30,7 @@ Some apps are also resistant to tampering via DLL injection. Chrome, for instanc
 
 # Dynamic code injection
 
-Dynamic code injection is the trickiest form of code injection, and is generally reserved for nefarious purposes, although you will also see it getting used by diagnostic tools (such as early versions of Time Travel Debugging).
+Dynamic code injection is the trickiest form of code injection, and is generally reserved for nefarious purposes, although you will also see it getting used by diagnostic tools (such as Time Travel Debugging).
 
 To do dynamic code injection without injecting a DLL, you allocate some memory in the target process using [AllocVirtualEx](https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualallocex), write some bytes representing the code you want to run using [WriteProcessMemory](https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-writeprocessmemory), and then create a thread (or modify an existing thread) to get the process to run your code. You have to be careful what code you write to the remote process to make sure it can operate independently and not rely on code that *isn't* copied (or DLLs that are not loaded).
 
@@ -88,7 +88,7 @@ Finally, we need to actually execute the code. Since our function follows the sa
     HANDLE hthread = CreateRemoteThread(pi.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)ptr, data, 0, NULL);
 ```
 
-You might be wondering how it's possible that we take the address of MessageBoxW in the local process, but call it in the remote process. This code relies on the fact that MessageBoxW is in user32.dll, and user32 will always be loaded at the same address for all processes on the system (along with ntdll and kernel32). This would not be safe with an arbitrary DLL, which can get relocated to different addresses in different processes.
+You might be wondering how it's possible that we take the address of MessageBoxW in the local process, but call it in the remote process. This code relies on the fact that MessageBoxW is in user32.dll, which will <a aria-describedby="footnote-label" href="#user32">typically be loaded at the same address for all programs</a> (there are cases where this isn't true, but I'll ignore that for the sake of keeping this example simple).
 
 Run this code and you have remote code injection on the winver.exe process, which you will see by a dialog box that says "Hi". And you can confirm that it's part of winver.exe process by closing the winver dialog, which will cause the message box to close as well!
 
@@ -102,6 +102,8 @@ Have a question or suggestion? Let me know! You can find me on [Twitter](https:/
   <h2 id="footnote-label">Footnotes</h2>
   <ol>
   <li id="tickcount">I once wrote a DLL that intercepted GetTickCount64 and a bunch of similar functions so that it could "stretch time" by some multiplier. It worked surprisingly well in a number of casual games with high score boards. Not that I would ever cheat of course...
+  </li>
+  <li id="user32">Originally this post said that user32 is always loaded at the same address, and that was based on what I read in an old [nynaeve post](http://www.nynaeve.net/?p=198), but someone pointed out to me this isn't true anymore (or perhaps never was?). Thanks JCAB!
   </li>
   </ol>
 </footer>
