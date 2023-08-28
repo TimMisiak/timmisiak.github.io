@@ -103,7 +103,7 @@ Have a question or suggestion? Let me know! You can find me on [Twitter](https:/
   <ol>
   <li id="tickcount">I once wrote a DLL that intercepted GetTickCount64 and a bunch of similar functions so that it could "stretch time" by some multiplier. It worked surprisingly well in a number of casual games with high score boards. Not that I would ever cheat of course...
   </li>
-  <li id="user32">Originally this post said that user32 is always loaded at the same address, and that was based on what I read in an old [nynaeve post](http://www.nynaeve.net/?p=198), but someone pointed out to me this isn't true anymore (or perhaps never was?). Thanks JCAB!
+  <li id="user32">Originally this post said that user32 is always loaded at the same address, and that was based on what I read in an old <a href="http://www.nynaeve.net/?p=198">nynaeve post</a>, but someone pointed out to me this isn't true anymore (or perhaps never was?). Thanks JCAB!
   </li>
   </ol>
 </footer>
