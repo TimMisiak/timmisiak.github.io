@@ -1,12 +1,12 @@
 ---
 title: "Snippy: An AI Assistant With Eyes"
-date: 2024-04-19T10:47:33-07:00
-draft: true
+date: 2024-04-21T10:47:33-07:00
+draft: false
 ---
 
-While I no longer work on WinDbg, I still spend a lot of time thinking about how we can make tools so people can build things faster. With WinDbg, I tried to do that by putting more debugging power at people's fingertips in a way that was easier to use. With LLMs exploding in the past few years, that's been another way that people have been able to build things faster. But for most people, using something like ChatGPT means pasting text back and forth between your different tools. We've seen some better integrations with tooling like in VS Code, but I think there are still a ton of tools where an LLM can be useful but there's just no "glue" connecting it to your apps.
+While I no longer work on WinDbg, I still spend a lot of time thinking about how to make tools so people can build things faster. With WinDbg, I tried to do that by putting more debugging power at people's fingertips in a way that was easier to use. Recently, everyone is looking for ways to use LLMs to build things faster. But for most people using something like ChatGPT means pasting text back and forth between your different tools. We've seen some better integrations with tooling like in VS Code, but I think there are still a ton of tools where an LLM can be useful but there's just no "glue" connecting it to your apps.
 
-At [Augmend](https://augmend.com), we think that giving an AI assistant "eyes" into what you're doing can solve some of these problems. When we saw the demo that [Suneel Matham had for sharing your screen with GPT-4](https://news.ycombinator.com/item?id=38203104), we knew we wanted to implement our own version, and it was a great chance to use our cross-platform screen capture Rust crate, which we've called [CrabGrab](https://insert-link-here). We're calling our screen-sharing GPT assistant [Snippy](https://insert-link-here)! We've made both Crab Grab and Snippy open source under the MIT license, so I'd love to see folks try these and make their own versions.
+At [Augmend](https://augmend.com), we think that giving an AI assistant "eyes" into what you're doing can solve some of these problems. When we saw the demo that [Suneel Matham had for sharing your screen with GPT-4](https://news.ycombinator.com/item?id=38203104), we knew we wanted to implement our own version, and it was a great chance to use our cross-platform screen capture Rust crate, [CrabGrab](https://crates.io/crates/crabgrab). We built a new screen-sharing GPT assistant with CrabGrab, and we called it [Snippy](https://github.com/AugmendTech/Snippy/)! We've made both CrabGrab and Snippy open source under MIT or Apache-2.0, so I'd love to see folks try these and make their own versions.
 
 # Demo
 
@@ -22,13 +22,13 @@ From there, you can start a "chat" where each message will include a screenshot 
 
 ![Chat with an app](/snippy_chat_cmd.png)
 
-It can also use context cues from what you're looking at to give correct answers for questions that would otherwise be ambiguous. Here I just asked how to get the disassembly of a function but didn't tell GPT what debugger I was using. It sees that I'm using WinDbg and gives the correct disassembly command! Without that context, ChatGPT usually tells me to use objdump or gdb.
+Besides just reading text, an LLM can also use context cues from what you're looking at to give correct answers for questions that would otherwise be ambiguous. Here I just asked how to get the disassembly of a function but didn't tell GPT what debugger I was using. It "sees" that I'm using WinDbg and gives the correct disassembly command! Without that context, ChatGPT usually tells me to use objdump or gdb.
 
 ![Questions with context!](/snippy_windbg.png)
 
 # How it works
 
-The code for Snippy is surprisingly simple, and uses three main pieces of tech. First, for the UI we're using [Tauri](https://tauri.app/). I'm a big fan of Tauri, because it's easy to use, low overhead, and cross-platform. It also makes it very easy for JavaScript UI code to talk to Rust code, which is great because that lets us use our cross-platform screen capture crate called CrabGrab for grabbing screenshots of applications. Finally, we make a base64 encoded PNG along with our system prompt and send it to GPT-4.
+The code for Snippy is fairly simple, and uses three main pieces of tech. First, for the UI we're using [Tauri](https://tauri.app/). I'm a big fan of Tauri, because it's easy to use, low overhead, and cross-platform. It also makes it very easy for JavaScript UI code to talk to Rust code, which is great because that lets us use our cross-platform screen capture crate called CrabGrab for grabbing screenshots of applications. Finally, we make a base64 encoded PNG along with our system prompt and send it to GPT-4.
 
 ## Tauri
 
@@ -206,4 +206,4 @@ There's a lot more we could do here, like including the full chat history, but t
 
 # Make your own!
 
-The hardest part of this whole project was the screen capture. There seemed to be no good cross-platform libraries for screen capture, and this was a big hurdle for both this project and the products we want to build at Augmend. To solve this problem we created CrabGrab as an open source project. We're hoping this will make it much easier for other people to create similar projects. If you want to read more about how we built CrabGrab, check out this post here (TODO: Insert link). Try it out and let us know what you build!
+The hardest part of this whole project was the screen capture. There seemed to be no good cross-platform libraries for screen capture, and this was a big hurdle for both this project and the products we want to build at Augmend. To solve this problem we created CrabGrab as an open source project. We're hoping this will make it much easier for other people to create similar projects. You can see a few other examples of CrabGrab in [the repo](https://github.com/AugmendTech/CrabGrab/). Try it out and let us know what you build!
