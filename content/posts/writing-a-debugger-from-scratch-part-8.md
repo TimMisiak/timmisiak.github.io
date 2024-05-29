@@ -1,7 +1,7 @@
 ---
 title: "Writing a Debugger From Scratch - DbgRs Part 8 - Source and Symbols"
 date: 2024-05-29T08:53:13-07:00
-draft: true
+draft: false
 ---
 
 (New to this series? Consider starting from [part 1](/posts/writing-a-debugger-from-scratch-part-1))
