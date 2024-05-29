@@ -6,7 +6,7 @@ draft: false
 
 (New to this series? Consider starting from [part 1](/posts/writing-a-debugger-from-scratch-part-1))
 
-At the end of the [last post](/posts/writing-a-debugger-from-scratch-part-7), DbgRs got the ability to disassemble the code that it was debugging. While disassembly is critical for many debugging tasks, using source code to step through the code line by line is usually more convenient when it's available. In this post we'll start looking at how to use symbols (PDB files on Windows) so that we can display the source for the code that's being debugged.
+At the end of the [last post](/posts/writing-a-debugger-from-scratch-part-7), DbgRs gained the ability to disassemble the code that it was debugging. While disassembly is critical for many debugging tasks, using source code to step through the code line by line is usually more convenient when it's available. In this post we'll start looking at how to use symbols (PDB files on Windows) so that we can display the source for the code that's being debugged.
 
 The DbgRs code for this post is in the [part8 branch on github](https://github.com/TimMisiak/dbgrs/tree/part8). You can also view the [changes from part7](https://github.com/TimMisiak/dbgrs/compare/part7...part8). If you spot any mistakes or have suggestions for improving the code, feel free to [create issues](https://github.com/TimMisiak/dbgrs/issues) on the GitHub repo or submit a PR.
 
