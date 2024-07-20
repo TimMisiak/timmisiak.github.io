@@ -4,7 +4,7 @@ date: 2023-01-03T9:20:24-07:00
 draft: false
 ---
 
-Assembly code scares people. There's a good reason for that. For many people, writing code in assembly language seems equivalent to writing code in ancient dwarven runes, or calculating pi in roman numerals. The fact that Roller Coast Tycoon was [almost completely written in assembly language](http://www.chrissawyergames.com/faq3.htm) sounds almost too amazing to be true. Many programmers view assembly language as some combination of ancient, arcane, inscrutable, useless, and complex.
+Assembly code scares people. There's a good reason for that. For many people, writing code in assembly language seems equivalent to writing code in ancient dwarven runes, or calculating pi in roman numerals. The fact that RollerCoaster Tycoon was [almost completely written in assembly language](http://www.chrissawyergames.com/faq3.htm) sounds almost too amazing to be true. Many programmers view assembly language as some combination of ancient, arcane, inscrutable, useless, and complex.
 
 Despite all that, I have a secret to share with you. Reading assembly language is not really that hard. Or at the very least, it's an order of magnitude easier than *writing* assembly language. There are a few reasons why that's true, but before we dive into that, let me first tell you why you should care about assembly language.
 
