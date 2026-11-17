@@ -1,0 +1,73 @@
+---
+title: "Making an OS From Scratch - Bootstrapping the dev loop"
+date: 2026-11-17T11:30:40-08:00
+draft: false
+---
+
+# I made an OS, and you should too
+
+I've always wanted to make my own OS, but it felt like an insurmountable project. I knew many of the pieces that would be needed, but not all of them. And to realistically make something usable or even useful in any small way seemed impossible. AI changes the equation. While it sucks most of the fun out of coding, it opens up the possibility of being the architect for a larger project without having to know every detail.
+
+If you've ever had an interest in making your own OS, keep reading. I want you to realize that YES, you can build one now. But don't just load up claude and say "make me an OS". You won't learn anything, and it won't be fun. Get involved, be the architect, and make some WEIRD choices. Because if you do something different from everyone else, you'll learn something new, even if what you learn is "so that's why no one does that". Don't just try to replicate Linux (poorly). If you take one thing away from this blog post, it's **yes you can build your own OS. It's fun, and you'll learn something along the way!**
+
+When I set out to make my own OS, I had a few goals to make sure I learned something new:
+
+1. Everything in Rust whenever possible. If AI is going to be writing some of the code, I want the language that will minimize the bugs it creates.
+2. The ability to hot swap binaries on the system (including drivers) while they are running, without losing state!
+3. Support for Linux apps!
+4. Works on a *real* machine with networking and GPU support.
+5. Almost everything runs in a single flat address space.
+
+{{% figure src="/dbgos-screenshot.png" caption="My hobby OS (DbgOS) running Firefox and a few of my own apps" %}}
+
+For the most part, I was able to build what I was trying to build. I learned quite a bit along the way, and I think it's achievable for most devs with some systems knowledge to do it as well. Set your own goals, and build something *weird*! There's a few tricks I used to effectively build an OS, so in this post I'll go through a few of them that I think will help get you started. There are some other aspects I'd like to write about (including how you can get Linux apps running in your own OS), but for this post I'm going to focus on bootstrapping your OS and setting up your dev loop.
+
+**NOTE:** I use AI for writing code, not for writing prose. Content for humans should be written by humans. Every word and typo in this post is my own.
+
+# The sandbox
+
+Personally, I don't trust running coding agents on my personal machine, but I also don't want to approve a command execution every few minutes. My solution is to run the coding agent in a sandbox. I made my own sandbox framework called [Loop](https://github.com/vybloop/vybloop) that lets agents install whatever they need, and also has an integrated code editor, git controls, and container management. You could use mine or any of the dozens that I'm sure exist with similar features. The important parts for me are: keeping the coding agent isolated, letting it install whatever it wants safely inside a sandbox, and support for running a VM inside the sandbox.
+
+I'm going to assume your sandbox is running in a Linux container. Lots of folks are using Windows sandboxes for their coding agents, so that's probably an option if you don't use Linux. I'm not really in touch with the Windows world anymore, and lots of coding agents work best running on Linux, so it's what I recommend. I run my sandbox on a Linux server and access it remotely through the Loop web UI from whatever browser I happen to be near.
+
+# The inner loop
+
+Once you have that set up, you need to think about the inner loop for you and your agent. You need an environment where an agent can build an OS image, test it, and then make changes all without manual work. And when it's done you'll need to be able to see the results. [QEMU](https://www.qemu.org/) is the answer, and it's one of the most powerful tools you can use for bootstrapping your OS. It gives the agent a fast inner loop and a way to run a test suite. It supports both emulation and virtualization (via KVM). With emulation you can build an OS for a platform other than where you're running your sandbox (so you can build an ARM64 OS on an x86 machine). If you're building for the same platform, virtualization gets you better performance and accuracy when experimenting and running tests. Virtualization helps catch bugs in cases where emulation doesn't perfectly match the hardware. Since I recommend running all of this inside a sandbox, it's helpful that QEMU can be easily set up for remote access. My setup uses [noVNC](https://novnc.com/info.html) in a web frontend talking through a websocket to a QEMU instance running my OS inside a sandbox. You can also show the serial output from QEMU, which is particularly useful during early development and for test suites.
+
+Something to know when looking at sandboxes, not every sandbox has the ability to run a VM inside it. If you're running on your own hardware in a Linux sandbox, you can map `/dev/kvm` into your container which is usually enough for QEMU to use KVM to use the virtualization features of your CPU. If you're running a sandbox in a cloud environment, you'll need a VM that supports nested virtualization. Not every Azure and AWS instance type supports it, and in AWS it seems you need to explicitly enable it.
+
+# Virtual hardware
+
+You can get quite a lot of interesting and useful functionality without ever running your OS on real hardware. You could build your OS to run on AWS or Azure and run as a web app, for instance. Make tiny images that are super efficient at doing a single thing, running directly on hardware! As you start boostrapping the OS in a VM you'll likely want to use "paravirtualized" devices that are often easier to implement and have more efficient communication mechanisms between guest/host OS compared to emulating real hardware. On QEMU the standard for virtual devices is called virtio, and there are networking, graphics, filesystem, and other devices that can be set up. Hyper-V on Windows uses paravirtualization via something called "VMBus", and this can get you access to the network. Get this running in Hyper-V, and networking should also work in Azure. Running on AWS means supporting the "ENA" network card, which is real hardware and not paravirtualized (and Azure is moving a similar direction, away from paravirtualized networking, although VMBus network should still work I've heard). I haven't gone down this path in AWS or Azure yet (I stopped after adding network support in Hyper-V), so most of what I'm writing about in this post is focused on real hardware. That said, running in AWS or Azure is probably the best path to something that's actually useful.
+
+# Real hardware
+
+If you want to target real hardware, there's a few things you should keep in mind as you plan your OS, particularly if you're going to target x86 hardware. Lots of hardware is poorly documented. Many drivers are just binaries on Windows. And even if there is a Linux driver with source available, they are often complex and contain firmware blobs. So it's good to pick what hardware you're going to support to make sure it's feasible. For many projects, something important to implement first is network support, since much of the developer loop will be significantly faster with a network connection between your dev environment and your hardware. This is probably the first thing you want to figure out for your OS.
+
+## Network
+
+An extremely common choice you'll hear about for networking when building an OS is "e1000". The e1000 was a line of gigabit ethernet cards sold by Intel starting around the late 90s. The original cards were PCI, and later cards moved to PCI Express and are generally called "e1000e". These cards had good documentation, open source reference drivers, and broad support. As a result, emulators and hypervisors often support presenting one to the guest OS as emualted hardware, and the emulation is usually close enough that the e1000e support you build for an emulated card gets you part or even most of the way towards a physical NIC working, depending on which card you get (particularly something like the 82574L). If you're running the OS on a desktop, you can easily add one of these as a PCI express card. They run about $10-$15 on amazon or ebay. Lots of chipsets fit this category. I got an 82574L for about $15 and it worked great, but there should be cheaper cards that also fit the bill, although each device will still have quirks of its own. If you want to make sure it has good references available, check that the chipset shows up in the [Linux e1000e source](https://github.com/torvalds/linux/blob/master/drivers/net/ethernet/intel/e1000e/netdev.c).
+
+If you opt for an older mini PC (and there are some good reasons for this) you can often find ones that have similar hardware. I got an older Dell OptiPlex 7070 Micro, which came with an I219 that is covered by the e1000e driver on Linux, although it required a few changes in the driver to support both the 82574L and the I219.
+
+You might be wondering "what about wifi?" and the unfortunate answer is that wifi is an order of magnitude more complex than wired networking. I haven't gone down that road, but if I did I'd probably try getting a USB dongle working first.
+
+## GPU
+
+For graphics support, you'll usually start out with simple framebuffer support. On a modern UEFI machine, a simple graphics driver gets loaded at boot by the firmware, and can hand off a linear framebuffer to the boot environment of whatever OS boots. While "boot services" are still active (i.e. the early environment where the OS still talks to UEFI), the OS can use the Graphics Output Protocol (GOP) to set up a framebuffer, and even after the OS finishes booting, this framebuffer will stay active and let you draw to the screen. So graphics drivers are really sort of optional in a modern machine. But the big drawback is that software rendering is quite slow for anything more than a simple terminal, compared with using a GPU. The GOP framebuffer approach is also a bit limited in that it doesn't support vsync or resolution changes.
+
+If you want to eventually have GPU acceleration for graphics, your options are limited. Modern GPUs are incredibly complex, and this is reflected in the size of their drivers. The single bright spot here is Intel. Integrated Intel GPUs from around 2015-2020 (Gen9 GPUs on Skylake through Comet Lake) are very accessible to a hobby OS and don't require additional firmware. They have good documentation and there is enough reference source around that a coding agent will get it working. And a 2015 mini pc with integrated Intel graphics will give you some great performance without breaking the bank. My dev hardware is an OptiPlex 7070 Micro with 8GB of RAM, and I picked it up for $150 on ebay.
+
+If you're feeling adventurous, modern Intel Arc GPUs are supposedly well documented, and will get you pretty high end GPU performance. I don't own one of these and haven't made an attempt, but it might be easier than trying to tackle an AMD card, which could be the next best option. And I would guess that supporting an NVidia card is a difficult challenge. That could change with better AI models and more open reference drivers in the future. If anyone gets any of these options working in a hobby OS though, I'd love to hear about it.
+
+# The hardware loop
+
+When you first boot your OS on real hardware, you have two options. The first option is PXE boot, which is a network boot from a file downloaded over TFTP. If you have a network config where you can easily set this up and point to your sandbox environment for the PXE image, this is a great option. For me, it wasn't worth the work of setting up, so I chose the second option, which was using bootable USB images. The process is building a ".img" (or ".img.xz") file that contains a disk image for your OS and any partitions it needs to run. You use a tool like [rufus](https://rufus.ie/en/), [balenaEtcher](https://etcher.balena.io/), or a similar tool to take that image and write it to a USB drive. Then plug that drive into your hardware machine and you can use a boot menu to boot from this drive. (You may need to disable secure boot)
+
+The downside of using USB is that each change needs you to download an image, write it to USB, swap the USB to the test machine, and then reboot it. And without a serial port (common on a mini PC of that era), debugging will probably be with writing output to a framebuffer. To make it easier to iterate on this with an agent, you could write a QR code or similar to the screen to capture details of a crash. That said, I had fairly good luck with just taking pictures of a text kernel panic screen and pasting it into a claude session.
+
+You don't really want to be iterating this way longer than you need to, so my recommendation is to target an early mechanism for testing new OS images entirely via network (another reason to do e1000e support early!). There are a few ways to do this, but the simplest is to have a mechanism to send binaries over the network and load them from memory. Depending on the design of your OS, this should let you quickly iterate on driver level code, especially if you can get your coding agent so it has direct access to your test machine (easy if it's running on the same network, otherwise might require setting up some tunnels). My recommendation would be to use this to get a basic USB storage system supported. From there, you can have your OS implement kernel updates by writing new kernel versions to USB storage. That's not trivial, but once you get there it lets your agent iterate quickly. Another good feature to implement is a "trial boot" system where you can roll back to an older kernel if it fails to boot. That's a bit more work up front, but can be implemented in an emulator and will save you time whenever you push a kernel that doesn't boot.
+
+# Go start building!
+
+If you've kept reading this far, I think you know what you should do next. Get QEMU installed and start building something! Let me know what you build! You can [find me on Bluesky](https://bsky.app/profile/timdbg.com) or [LinkedIn](https://www.linkedin.com/in/tim-misiak/) these days. For myself, I'm going to keep experimenting with my own OS. In its future are definitely some debugging and diagnostic tools, and maybe some fun things to write about. Until then, happy hacking!
