@@ -1,8 +1,7 @@
 baseURL = '/'
-languageCode = 'en-us'
+locale = 'en-us'
 title = 'TimDbg'
 theme = "m10c"
-googleAnalytics = "G-ZF3NN3CLRX"
 
 rssLimit = 20
 copyright = "2022 Tim Misiak"
@@ -40,3 +39,7 @@ copyright = "2022 Tim Misiak"
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
+
+[services]
+  [services.googleAnalytics]
+    id = "G-ZF3NN3CLRX"
